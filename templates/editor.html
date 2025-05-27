@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Remover</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --primary-dark: #1976D2;
+            --background-color: #B2D8CE;
+            --container-width: 1200px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-bar {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .app-bar h1 {
+            margin: 0;
+            text-align: center;
+            font-weight: bold;
+            max-width: var(--container-width);
+            margin: 0 auto;
+        }
+
+        .main-container {
+            flex: 1;
+            max-width: var(--container-width);
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .image-section {
+            flex: 1;
+            min-width: 300px;
+            max-width: 600px;
+        }
+
+        .image-container {
+            width: 100%;
+            aspect-ratio: 1;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+            border-radius: 15px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-container.empty {
+            color: #757575;
+            font-size: 16px;
+            background-color: #ffffff;
+        }
+
+        .controls-section {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn i {
+            font-size: 20px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .flash-messages {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: #ffebee;
+            color: #c62828;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        #loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .upload-prompt {
+            text-align: center;
+            padding: 2rem;
+            border: 2px dashed #ccc;
+            border-radius: 15px;
+            margin: 1rem 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-prompt:hover {
+            border-color: var(--primary-color);
+            background-color: #fff;
+        }
+
+        .upload-prompt i {
+            font-size: 48px;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+                flex-direction: column;
+            }
+
+            .image-section {
+                min-width: 100%;
+            }
+
+            .btn {
+                min-width: 120px;
+                padding: 10px 20px;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+            }
+        }
+
+        #cameraModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .camera-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 90%;
+            width: 600px;
+            position: relative;
+        }
+
+        #cameraFeed {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .camera-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .close-camera {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-camera:hover {
+            background-color: #f0f0f0;
+        }
+
+        #captureBtn {
+            background-color: #4CAF50;
+        }
+
+        #captureBtn:hover {
+            background-color: #45a049;
+        }
+
+        .camera-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        #switchCameraBtn {
+            background-color: var(--primary-color);
+            margin-left: 10px;
+        }
+
+        .camera-permission-error {
+            color: #c62828;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="app-bar">
+        <h1>Background Remover</h1>
+    </div>
+
+    <div id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="main-container">
+        <div class="image-section">
+            <h2 class="section-title">Original Image</h2>
+            <div class="upload-prompt" onclick="document.getElementById('fileInput').click()">
+                <i class="material-icons">cloud_upload</i>
+                <p>Click or drag image here to upload</p>
+            </div>
+            <div class="image-container empty" id="originalImageContainer">
+                <span>No image selected</span>
+            </div>
+            <div class="controls-section">
+                <button type="button" class="btn" onclick="document.getElementById('fileInput').click()">
+                    <i class="material-icons">photo_library</i>
+                    Gallery
+                </button>
+                <button type="button" class="btn" onclick="startCamera()">
+                    <i class="material-icons">camera_alt</i>
+                    Camera
+                </button>
+                <button type="button" class="btn" id="removeBtn" style="display: none;" onclick="removeBackground()">
+                    <i class="material-icons">auto_fix_high</i>
+                    Remove BG
+                </button>
+            </div>
+        </div>
+
+        <div class="image-section" id="processedSection" style="display: none;">
+            <h2 class="section-title">Processed Image</h2>
+            <div class="image-container" id="processedImageContainer"></div>
+            <div class="controls-section">
+                <button type="button" class="btn" onclick="downloadProcessedImage()">
+                    <i class="material-icons">save_alt</i>
+                    Download
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleImageSelect(this)">
+    
+    <!-- Camera Modal -->
+    <div id="cameraModal">
+        <div class="camera-container">
+            <button class="close-camera" onclick="closeCamera()">
+                <i class="material-icons">close</i>
+            </button>
+            <video id="cameraFeed" autoplay playsinline></video>
+            <div class="camera-controls">
+                <button id="captureBtn" class="camera-btn">
+                    <i class="material-icons">camera</i>
+                    Capture
+                </button>
+                <button id="switchCameraBtn" class="camera-btn">
+                    <i class="material-icons">flip_camera_ios</i>
+                    Switch Camera
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let processedImageUrl = null;
+        let stream = null;
+        let facingMode = 'user'; // or 'environment'
+        
+        function handleImageSelect(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const container = document.getElementById('originalImageContainer');
+                    container.innerHTML = `<img src="${e.target.result}" alt="Selected image">`;
+                    container.classList.remove('empty');
+                    document.getElementById('removeBtn').style.display = 'flex';
+                    document.querySelector('.upload-prompt').style.display = 'none';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function startCamera() {
+            const modal = document.getElementById('cameraModal');
+            const video = document.getElementById('cameraFeed');
+            
+            try {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: facingMode
+                    }
+                });
+                
+                video.srcObject = stream;
+                modal.style.display = 'flex';
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Error accessing camera. Please make sure you have granted camera permissions.');
+            }
+        }
+
+        function closeCamera() {
+            const modal = document.getElementById('cameraModal');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            modal.style.display = 'none';
+        }
+
+        document.getElementById('switchCameraBtn').addEventListener('click', () => {
+            facingMode = facingMode === 'user' ? 'environment' : 'user';
+            startCamera(); // Restart camera with new facing mode
+        });
+
+        document.getElementById('captureBtn').addEventListener('click', async () => {
+            if (!stream) return;
+
+            const video = document.getElementById('cameraFeed');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert canvas to blob
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+                
+                // Create a FormData object
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Update UI to show selected image
+                const container = document.getElementById('originalImageContainer');
+                container.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="Captured image">`;
+                container.classList.remove('empty');
+                document.getElementById('removeBtn').style.display = 'flex';
+                document.querySelector('.upload-prompt').style.display = 'none';
+                
+                // Close camera
+                closeCamera();
+            }, 'image/jpeg', 0.8);
+        });
+
+        async function removeBackground() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    processedImageUrl = URL.createObjectURL(blob);
+                    
+                    const container = document.getElementById('processedImageContainer');
+                    container.innerHTML = `<img src="${processedImageUrl}" alt="Processed image">`;
+                    document.getElementById('processedSection').style.display = 'block';
+                } else {
+                    const text = await response.text();
+                    showError('Error: ' + text);
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function downloadProcessedImage() {
+            if (processedImageUrl) {
+                const a = document.createElement('a');
+                a.href = processedImageUrl;
+                a.download = 'removed_bg.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        }
+
+        function showError(message) {
+            const flashMessages = document.createElement('div');
+            flashMessages.className = 'flash-messages';
+            flashMessages.innerHTML = `
+                <div class="flash-message error">
+                    ${message}
+                </div>
+            `;
+            document.body.appendChild(flashMessages);
+            setTimeout(() => flashMessages.remove(), 5000);
+        }
+
+        // Auto-hide existing flash messages after 5 seconds
+        setTimeout(() => {
+            const messages = document.querySelector('.flash-messages');
+            if (messages) messages.style.display = 'none';
+        }, 5000);
+    </script>
+</body>
+</html> 
